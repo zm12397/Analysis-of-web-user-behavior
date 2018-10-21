@@ -1,0 +1,8 @@
+<component name="ArtifactManager">
+  <artifact type="jar" name="web-analysis-import:jar">
+    <output-path>$PROJECT_DIR$/out/artifacts/web_analysis_import_jar</output-path>
+    <root id="archive" name="hadoop-workspace.jar">
+      <element id="module-output" name="hadoop-workspace" />
+    </root>
+  </artifact>
+</component>
