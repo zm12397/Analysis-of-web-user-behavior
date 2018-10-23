@@ -1,0 +1,124 @@
+一.hive命令：
+    创建hive的外部表：
+    CREATE EXTERNAL TABLE bigdata_user(id INT,uid STRING,item_id STRING,behavior_type INT,item_category STRING,visit_date DATE,province STRING) 
+        ROW FORMAT DELIMITED
+        FIELDS TERMINATED BY '\t'
+        STORED AS TEXTFILE
+        LOCATION 'hdfs://master:9000//usr/zm/webuser/dataset';
+
+    创建HDFS目录
+        dfs -mkdir /usr/zm/webuser;
+        dfs -mkdir /usr/zm/webuser/dataset;
+
+    从本地上传文件
+        dfs -copyFromLocal /mnt/hgfs/toCentOs/input/user_table.txt /usr/zm/webuser/dataset;
+
+    查看建表信息
+        SHOW CREATE TABLE bigdata_user;
+
+    查看表结构
+        DESC bigdata_user;
+
+    查询前10条数据
+
+        SELECT * FROM bigdata_user LIMIT 10;
+
+    查询前20位用户购买商品的种类
+
+        SELECT item_category FROM bigdata_user LIMIT 10;
+
+    查询表内数据的数量
+
+        SELECT COUNT(*)  FROM bigdata_user;
+
+    查询表内的用户数量
+
+        SELECT COUNT(DISTINCT uid) FROM bigdata_user;
+    
+    查询2014年12月10日到2014年12月13日有多少人浏览了商品
+
+        SELECT COUNT(*) FROM bigdata_user WHERE behavior_type = 1 AND visit_date < '2014-12-13' AND visit_date > '2014-12-10';
+
+    以月的第n天为统计单位，依次显示第n天网站卖出去的商品的个数
+
+        SELECT COUNT(*),day(visit_date) FROM bigdata_user
+
+        WHERE behavior_type = 4
+
+        GROUP BY day(visit_date);
+
+
+    查询每个地区的用户浏览网站的次数
+
+        CREATE TABLE user_provice_scan
+
+            ROW FORMAT DELIMITED
+
+            FIELDS TERMINATED BY '\t'
+
+            STORED AS TEXTFILE
+
+            AS SELECT province,COUNT(behavior_type) FROM bigdata_user
+
+            WHERE behavior_type = 1 GROUP BY province;
+
+    建立user_action表，该表为内嵌表
+
+        CREATE TABLE user_action(id STRING,uid STRING,item_id STRING,behavior_type STRING,item_category STRING,visit_date DATE,province STRING)
+
+            ROW FORMAT DELIMITED FIELDS TERMINATED BY '\t' 
+
+            STORED AS TEXTFILE;
+
+    填充user_action数据
+
+        INSERT OVERWRITE TABLE user_action
+
+            SELECT * FROM bigdata_user;
+
+二.Mysql命令
+    创建user_action表
+
+        DROP TABLE IF EXISTS user_action;
+
+        CREATE TABLE user_action (
+
+            id varchar(50) DEFAULT NULL,
+
+            uid varchar(50) DEFAULT NULL,
+
+            item_id varchar(50) DEFAULT NULL,
+
+            behavior_type varchar(10) DEFAULT NULL,
+
+            item_category varchar(50) DEFAULT NULL,
+
+            visit_date date DEFAULT NULL,
+
+            province varchar(20) DEFAULT NULL
+
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+
+三.shell命令
+    使用Sqoop从hive导入到mysql
+
+     sqoop export --connect jdbc:mysql://192.168.206.1:3306/hadoopguide --username hive 
+        -P --table user_action --export-dir /user/hive/warehouse/user_action --fields-terminated-by '\t
+
+    使用Sqoop从mysql导入到Hbase
+
+    sqoop import --connect jdbc:mysql://192.168.206.1:3306/hadoopguide --username hive 
+        -P --table user_action --hbase-table user_action --column-family userinfo 
+        --hbase-row-key id --hbase-create-table -m 1
+
+    运行jar命令：
+
+    hadoop jar /mnt/hgfs/toCentOs/hbase_import.jar com.zfm.hadoop.web.analysis.HBaseImporter
+         /mnt/hgfs/toCentOs/input/user_action/000000_0 user_action
+
+四.hbase命令
+    创建表user_action
+
+        create 'user_action',{NAME => 'userinfo',VERSIONS => 5}
+
+    
